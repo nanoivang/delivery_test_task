@@ -41,8 +41,6 @@ def generate_permutations(coords):
     """
         Функция генерирует все возможные перестановки координат. 
     """
-
-
     all_keys = list(coords.keys())
     all_keys.remove('start0')
     for permutation in permutations(all_keys):
@@ -129,7 +127,6 @@ class OrderList:
 
         min_distance = float('inf')
         for p in generate_permutations(coords):
-            
             d = 0
             for i in range(len(p) - 1):
                 d += shortest_path(coords[p[i]], coords[p[i + 1]])
@@ -138,7 +135,6 @@ class OrderList:
                 self.fastest_path = []
                 for key in p:
                     self.fastest_path.append(coords[key])
-
 
         return min_distance
 
@@ -191,6 +187,11 @@ class CourierDispatcher: # Класс раздачи заказов курьер
         self.__courier_list.append(result)
 
         return result
+    
+    def register_couriers(self, data : list):
+        for cour_data in data:
+            self.__courier_list.append(Courier(cour_data, self.__courier_count))
+            self.__courier_count += 1
 
     def assign_couriers(self, orders : list):
         """
@@ -198,13 +199,15 @@ class CourierDispatcher: # Класс раздачи заказов курьер
         """
         # Выдаем ближайшую доставку для курьера.
         for courier in self.__courier_list:
-            closest_order = min((order for order in orders if not courier.have_order()), key=lambda order: shortest_path(courier.location, order.start) + shortest_path(order.start, order.finish))
+            closest_order = min((order for order in orders if not courier.have_order()), key=lambda order: shortest_path(courier.location, order[0]))
             if closest_order:
-                courier.assign_order(closest_order)
+                order = Order(*closest_order)
+                courier.assign_order(order)
                 orders.remove(closest_order)
 
         # если заказов больше чем курьеров ищем самого "быстрого курьера"
-        for order in orders:
+        for o in orders:
+            order = Order(*o)
             minimal_dist = float('inf')
             fastest_cour = None
             for courier in self.__courier_list:
@@ -229,18 +232,9 @@ class CourierDispatcher: # Класс раздачи заказов курьер
 if __name__ == "__main__":
     courier_disp = CourierDispatcher()
 
-    courier_disp.register_courier([-15, 11])
-    courier_disp.register_courier([-30, -13])
-    courier_disp.register_courier([27, 34.5])
-    courier_disp.register_courier([32, -10])
+    courier_list = [[-15, 11], [-30, -13], [27, 34.5], [32, -10]]
+    delivery_list = [[[-24, 16.5], [-13, 23.5], 1000], [[-30, 10], [-10, -5], 900], [[1, 3], [8,-8], 600], [[30, 10], [35, 5], 550], [[10, 10], [23, 33], 400], [[-17, -18], [10, -15], 123]]
 
-    dlvry1 = Order([-24, 16.5], [-13, 23.5], 1000)
-    dlvry2 = Order([-30, 10], [-10, -5], 900)
-    dlvry3 = Order([1, 3], [8,-8], 600)
-    dlvry4 = Order([30, 10], [35, 5], 550)
-    dlvry5 = Order([10, 10], [23, 33], 400)
-    dlvry6 = Order([-17, -18], [10, -15], 123)
-
-    delivery_list = [dlvry1, dlvry2, dlvry3, dlvry4, dlvry5, dlvry6]
-
+    courier_disp.register_couriers(courier_list)
     courier_disp.assign_couriers(delivery_list)
+

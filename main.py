@@ -15,7 +15,7 @@
 # Курьерам будет назначены заказы и оптимальные пути развоза заказов для приоритизации времени доставки клиентам.
 
 import math
-from itertools import permutations
+from itertools import permutations, product
 
 def shortest_path(point1, point2) -> float:
     """
@@ -100,6 +100,8 @@ class OrderList:
         prev.next = temp.next
         temp = None
 
+    def clear_orders(self):
+        self.head = None
     
     def total_distance(self) -> float:
         result = 0
@@ -112,6 +114,7 @@ class OrderList:
             current = current.next
         
         return result
+    
     
     def optimal_distance(self) -> float:
         if self.head.next is None:
@@ -197,33 +200,57 @@ class CourierDispatcher: # Класс раздачи заказов курьер
         """
             Функция назначает курьера для каждой доставки.
         """
-        for courier in self.__courier_list:
-            closest_order = min((order for order in orders if not courier.have_order()), key=lambda order: shortest_path(courier.location, order[0]) + shortest_path(order[0], order[1]))
-            if closest_order:
-                order = Order(*closest_order)
-                courier.assign_order(order)
-                orders.remove(closest_order)
 
-        # если заказов больше чем курьеров ищем самого "быстрого курьера"
-        for o in orders:
-            order = Order(*o)
-            minimal_dist = float('inf')
-            fastest_cour = None
-            for courier in self.__courier_list:
-                courier.assign_order(order)
-                cour_dist = courier.travel_distance()
-                if minimal_dist > cour_dist:
-                    minimal_dist = cour_dist
-                    fastest_cour = courier
-                courier.remove_order(order)
-            
-            fastest_cour.assign_order(order)
+        order_count = len(orders)
+        order_indexes = [i for i in range(order_count)]
+
+        courier_count = len(self.__courier_list)
+
+        perms = list(permutations(order_indexes, len(orders)))
+        all_lists = list(product(range(1, courier_count), repeat=courier_count))
+        filtered_lists = [lst for lst in all_lists if sum(lst) == order_count]
+
+        possible_distrs = []
+
+        for perm in perms:
+            for counts in filtered_lists:
+                courier_ids = [courier.id for courier in self.__courier_list]
+                dictionary = {key: [] for key in courier_ids}
+
+                start = 0
+                for i, count in enumerate(counts):
+                    dictionary[courier_ids[i]].extend(perm[start:start+count])
+                    start += count
+
+                possible_distrs.append(dictionary)
         
-        for courier in self.__courier_list:
-            print(f'courier {courier.id}')
-            courier.print_orders()
-            print(f'travels {courier.travel_distance()}')
-            print(f"Fastest path: {courier.location} {courier.order_list.fastest_path} \n")
+        max_courier_times = []
+
+        for distr in possible_distrs:
+            distances = []
+            for cour_id, order_list in distr.items():
+                c_id = int(cour_id)
+                for i in order_list:
+                    self.__courier_list[c_id].assign_order(Order(*orders[i]))
+                distances.append(self.__courier_list[c_id].travel_distance())
+            max_courier_times.append(max(distances))
+            for i in range(courier_count):
+                self.__courier_list[i].order_list.clear_orders()
+        
+        best_index = min(enumerate(max_courier_times), key=lambda x: x[1])[0]
+        best_distr = possible_distrs[best_index]
+
+        for cour_id, order_list in best_distr.items():
+            c_id = int(cour_id)
+            for i in order_list:
+                self.__courier_list[c_id].assign_order(Order(*orders[i]))
+            print(f'Courier {c_id} at {self.__courier_list[c_id].location}, travels {self.__courier_list[c_id].travel_distance()} and has orders:')
+            self.__courier_list[c_id].print_orders()
+            print(f'and travels {self.__courier_list[c_id].order_list.fastest_path}\n')
+
+            
+        
+            
                     
 
 

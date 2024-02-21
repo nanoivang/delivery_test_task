@@ -197,9 +197,8 @@ class CourierDispatcher: # Класс раздачи заказов курьер
         """
             Функция назначает курьера для каждой доставки.
         """
-        # Выдаем ближайшую доставку для курьера.
         for courier in self.__courier_list:
-            closest_order = min((order for order in orders if not courier.have_order()), key=lambda order: shortest_path(courier.location, order[0]))
+            closest_order = min((order for order in orders if not courier.have_order()), key=lambda order: shortest_path(courier.location, order[0]) + shortest_path(order[0], order[1]))
             if closest_order:
                 order = Order(*closest_order)
                 courier.assign_order(order)
